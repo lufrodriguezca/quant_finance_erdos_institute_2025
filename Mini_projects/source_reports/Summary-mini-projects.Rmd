@@ -1,0 +1,264 @@
+---
+title: "Introduction to Quantitative Methods in Finance Erdös Bootcamp - Summary mini projects"
+author: "Luisa Rodriguez"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    latex_engine: xelatex #or lualatex
+    includes:
+      in_header: preamble.tex
+  html_notebook: default
+urlcolor: blue
+fontsize: 10pt
+mainfont: Roboto 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This document provides a summary about the projects developed during the Summer 2025 Boot Camp. Source code can be found in [Here](https://github.com/lufrodriguezca/quant_finance_erdos_institute_2025/tree/main/Mini_projects "Miniprojects").
+
+## Portfolio optimization
+
+Create two potentially profitable investment portfolios. One that is lower risk and one that is higher risk.
+
+Stock from seven companies from diverse economical sectors were analyzed during the time period starting from 2023.07.12 to 2024.08.05 (See Table 1 and Figure 1.). This particular time period was selected because the log returns did show normality (p-value = 0.077, D’Agostino and Pearson’s Test), and because companies were not strongly correlated according to the Pearson coefficient (See Figure 2.). and accordingly to the covariance matrix (See Figure 3.).
+
+### Preliminary definitions
+
+* Expected return:
+  $$\mu_V = \mathbf{m} \mathbf{w}^T$$
+  
+* Volatility:
+  $$\sigma_V = \sqrt{\mathbf{w}\mathbf{C}\mathbf{w}^{T}}$$
+
+* Sharpe ratio:
+  $$S_r = \frac{\mu_V - r}{\sigma_V}$$
+
+  where
+
+  $$\mathbf{w} = [w_1, w_2, \cdots, w_N]$$ 
+
+  $$\mathbf{m} = [\mu_1, \mu_2, \cdots, \mu_N]$$
+
+  $$\mathbf{C} = \begin{bmatrix}
+c_{11}&c_{12} & \cdots & c_{1N} \\
+c_{21}&c_{22} & \cdots & c_{2N} \\
+\vdots & \vdots & \ddots & \vdots \\
+c_{N1}&c_{N2} & \cdots & c_{NN}
+\end{bmatrix} $$
+
+$$c_{ij} = Cov(K_i, K_j)$$
+
+$\mathbf{w}$ (portfolio weights vector)
+
+$\mathbf{m}$ (expected return assets vector)
+
+$K_i$ (return value for the asset $i$)
+
+$r$ (Risk free rate)
+
+```{r table-simple, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+require(pander)
+panderOptions('table.split.table', Inf)
+set.caption("Companies that compose the portfolios to optimize")
+my.data2 <- " 
+   Company name | Ticker  
+   Fast Retailing Co., Ltd. | FRCOY
+   Alphabet Inc. | GOOG
+  International Business Machines Corporation | IBM
+JPMorgan Chase & Co. | JPM
+Netflix, Inc. | NFLX
+Exxon Mobil Corporation | XOM
+Yum! Brands, Inc. | YUM"
+df2 <- read.delim(textConnection(my.data2),header=FALSE,sep="|",strip.white=TRUE,stringsAsFactors=FALSE)
+names(df2) <- unname(as.list(df2[1,])) # put headers on
+df2 <- df2[-1, ] # remove first row
+row.names(df2)<-NULL
+pander(df2, style = 'rmarkdown')
+```
+
+```{r plot1, fig.height = 0.5, fig.width = 3,out.width = "100%", fig.align = "center", fig.cap = 'Cummulative returns for the seven companies from Table 1. Stock data retrieved from Yahoo Finance. Analyses correspond to the time period from 2023.07.12 to 2024.08.05.', echo = FALSE, warning = FALSE}
+knitr::include_graphics("images/figure_1_project_1.pdf")
+```
+
+```{r plot2a, fig.height = 2, fig.width = 8, out.width = "105%",fig.align = "center", fig.cap = 'Correlation Matrix (Pearson coefficient) for the focal companies', echo = FALSE, warning = FALSE}
+knitr::include_graphics("images/figure_2a_project_1.pdf")
+```
+
+```{r plot2b, fig.height = 2, fig.width = 8, out.width = "105%", fig.align = "center", fig.cap = 'Covariance Matrix for the focal companies', echo = FALSE, warning = FALSE}
+knitr::include_graphics("images/figure_2b_project_1.pdf")
+```
+
+### A. Lower risk portfolio
+
+The construction of the lower risk portfolio was performed by using the criteria of minimizing the historical portfolio's variance subject to the following constrains:
+
+1. $\sum_i^N w_i = 1$.
+2. Cannot invest more that 35% of capital into a single asset, this is $w_i < 0.35$.
+
+### B. Higher risk portfolio
+
+The construction of this portfolio is based on maximizing the Sharpe ratio, allowing the best risk-adjustment. Similar constrains than A apply here.
+
+### Optimization via Monte Carlo Simulation 
+
+Portfolios were optimized via Monte Carlo Simulation. Were generated 10000 random sets of portfolio investment percentages (asset weights) for the focal companies, and from those were selected the set for which the portfolio variance was minimum (A criteria), and the set for which the portfolio Sharpe ratio reach its higher value (B criteria). 
+
+### Results
+
+The set of asset weights that set up portfolios with lower and higher risk are shown in Table 2., Figure 4. shows the volatility and expected return for all the simulated portfolios. Black and green points show the set of asset weights for portfolios with higher and lower risk, respectively. The main metrics for the optimized portfolios is shown in Table 3.
+
+```{r table-2, echo = FALSE, message = FALSE, warnings = FALSE, results = 'asis'}
+weights = read.csv("images/optimal.csv", header = TRUE, sep = ",")
+colnames(weights) = c("Company", "Lower risk %", "Higher risk %" )
+
+knitr::kable(weights, caption = "Optimal weights for portfolios with lower and higher risk")
+```
+
+```{r table-3, echo = FALSE, message = FALSE, warnings = FALSE, results = 'asis'}
+metrics = read.csv("images/metrics.csv", header = TRUE, sep = ",")
+
+colnames(metrics) = c("Risk", "Sharpe ratio", "Volatility", "Annualized expected return %", "Value at risk %")
+
+knitr::kable(metrics, caption = "Main metrics for the designed dortfolios")
+```
+
+```{r plot3, fig.height = 6, fig.width = 10, out.width = "130%", fig.align = "center", fig.cap = 'Generated weights via Monte Carlo Simulation. Green and black dots represent the optimal values for the lower and higher risk portfolios, respectively. The Red dot shows the expected return at the free risk value.', echo = FALSE, warning = FALSE}
+knitr::include_graphics("images/figure_3_project_1.pdf")
+```
+
+\clearpage
+
+## Hypothesis Testing of Standard Assumptions Theoretical Financial Mathematics
+
+Investigate if the log returns of stocks or indexes of your choosing are normally distributed. 
+
+For this project, a function was implemented in python. This function takes random subintervals of time and calculates the p-values (D’Agostino and Pearson’s Test). After this, the function stores the candidate subintervals and merges those that are contained in bigger subintervals. The function returns a subset of time intervals for which the log returns show evidence of normality. Analyses were performed over different portfolios and stocks. Was observed that normality periods for the present times are very scarce, as well as for periods of time in which major economic and geopolitical events occurred. Also, was observed from the empirical data that removing non-normal periods between normal periods does not always guarantee normality, even for non-overlapping sub-intervals that share one extreme. 
+
+### 1, 2) Test if there are period of times when the log-returns of a stock/index have evidence of normal distribution. Test if removing extermal return data creates a distribution with evidence of being normal.
+
+Data exploration is be based on the NASDAQ composite index for a ten-year period (2020.06.26 - 2025.06.25) (See Figures 5-6). 
+
+```{r plot5, fig.height = 6, fig.width = 10, out.width = "110%", fig.align = "center", fig.cap = 'Stock data from the Nasdaq index for a ten year period.', echo = FALSE, warning = FALSE}
+#5
+knitr::include_graphics("images/figure_1_project_2.pdf")
+```
+
+```{r plot6, fig.height = 6, fig.width = 10, fig.align = "center", fig.cap = 'Log daily returns Nasdaq index for a ten year period.', echo = FALSE, warning = FALSE}
+#6
+knitr::include_graphics("images/figure_2_project_2.pdf")
+```
+
+For the NASDAQ index, the log-returns are normally distributed for the time period starting from 2021.11.22 to 2023.08.25. (See Figure 7. and Table 4.).
+
+```{r plot7, fig.height = 6, fig.width = 10, out.width = "110%", fig.align = "center", fig.cap = 'Log daily returns Nasdaq index for a time interval in which log-returns were normally distributed', echo = FALSE, warning = FALSE}
+#7
+knitr::include_graphics("images/figure_3_project_2.pdf")
+```
+
+```{r table-4, echo = FALSE, message = FALSE, warnings = FALSE, results = 'asis'}
+weights = read.csv("images/normal_IXIC.csv", header = TRUE, sep = ",")
+#colnames(weights) = c("Company", "Lower risk %" )
+weights = weights[,2:5]
+knitr::kable(weights, caption = "time period in which Log-returns are normally distributed. Nasdaq composite index.")
+```
+
+### 3) Create a personalized portfolio of stocks with historical log return data that is normally distributed.
+
+Data exploration is based on a portfolio composed of stocks from Alphabet, IBM, and Nvidia for a period of four years (2021.06.26 - 2025.06.25). According to the algorithm, normality was observed for the time period starting from 2021.07.13 until 2023.05.25, a total of 472 days. (See Table 5 and Figure 8.).
+
+```{r plot8, fig.height = 6, fig.width = 10, out.width = "100%", fig.align = "center", fig.cap = 'Log daily returns normally distributed for a portfolio composed of Nvifdia, Alphabet and IBM.', echo = FALSE, warning = FALSE}
+#8
+knitr::include_graphics("images/figure_4_project_2.pdf")
+```
+
+```{r table-5, echo = FALSE, message = FALSE, warnings = FALSE, results = 'asis'}
+weights = read.csv("images/normal_portfolio.csv", header = TRUE, sep = ",")
+#colnames(weights) = c("Company", "Lower risk %" )
+weights = weights[,2:5]
+knitr::kable(weights, caption = "time period in which Log-returns are normally distributed. Portfolio composed of stocks from Alphabet, IBM, and Nvidia.")
+```
+
+### 4) Test if the portfolio you created in the first mini-project has significant periods of time with evidence of normally distributed log returns.
+
+Please refer to Miniproject 1.
+
+### 5) Gather x-number of historical stock data and just perform a normality test on their log return data to see if any of the stocks exhibit evidence of log returns that are normally distributed.
+
+For examining the historical stock data, was taken the list of companies that belong to the SP500 index during a five years time period (2020.06.26 - 2025.06.25). Companies for which data was not available for the whole time period were removed. By simplicity, The algorithm was run and extracted for each company the longest time interval normally distributed. (See Table 6.).
+
+```{r table-6, echo = FALSE, message = FALSE, warnings = FALSE, results = 'asis'}
+port3 = read.csv("images/normal_summary_SP_data.csv", header = TRUE, sep = ",")
+#colnames(weights) = c("Company", "Lower risk %" )
+#port3 = weights[,2:5]
+port3 = port3[1:20,2:5]
+knitr::kable(port3, caption = "Time periods in which Log-returns are normally distributed for 20 companies. Portfolio composed of stocks from the SP500 composite index.")
+```
+
+\clearpage
+
+## Call and put options - Time and spot price sensitivity
+
+**a)** Interpret how the *rate of change* of the Black-Scholes call option price behaves as time progresses.
+
+**b)** Visualize how the *rate of change* of the Black-Scholes call option price depends on the spot price $S(0)$.
+
+**c)** Repeat parts **a** and **b** for **put option** prices.
+
+**d)** Use the space below to record your observations and reflections based on the generated plots.
+
+### Observations:
+
+*Call and Put Options – Time Sensitivity:*
+
+For an example in which the model parameters for the Black-Scholes model are as in Table 7. (Cases A-C), note that the Call option function increases as the time of expiration increases. The reason for this is because the further in time, the anticipated move of the price should be larger to have the possibility of profits. In addition, it is possible to observe that when the interest rate is set equal to zero, the put price is higher than the call price (Figure 9.).
+
+When setting the strike and current stock prices equal (Case B), the call and put options functions overlap (Figure 10.). However, when setting a risk-free interest rate, the call option price is higher than the put price, because as the time increases, the uncertainty regarding the price increases (Case C, Figure 11.).
+
+```{r table-simplek, echo=FALSE, message=FALSE, warnings=FALSE, results='asis'}
+require(pander)
+panderOptions('table.split.table', Inf)
+set.caption("Black-Scholes model parameters")
+my.data2 <- " 
+   Parameter | Values case A |Values case B | Values case C 
+   Current stock price | 100 | 100 | 100
+   Strike price | 110 | 100 | 100
+  Volatility | 0.3 | 0.3 | 0.3
+Risk-free interest rate | 0 | 0 | 0.05" 
+df2 <- read.delim(textConnection(my.data2),header=FALSE,sep="|",strip.white=TRUE,stringsAsFactors=FALSE)
+names(df2) <- unname(as.list(df2[1,])) # put headers on
+df2 <- df2[-1, ] # remove first row
+row.names(df2)<-NULL
+pander(df2, style = 'rmarkdown')
+```
+
+*Call and put Options – Spot Price Sensitivity:*
+
+When the current stock price is approximately equal to the strike price, the call and put options functions intersect or have the same price. Also notice that as the current stock price $S(0)$ gets higher, the call price tend to $S(0) - K e^{-rt}$ and the put option tends to zero. In an analogous manner, when $S(0)$ becomes small, the put option price tends to $K e^{rt} - S(0)$ and the call option price tends to zero. (See Figure 12.). 
+
+```{r plot9, fig.height = 4, fig.width = 8, out.width = "85%", fig.align = "center", fig.cap = 'Case A. Black-Scholes model Call and Put Options prices varying time to expiration', echo = FALSE, warning = FALSE}
+#8
+knitr::include_graphics("images/figure_1_project_3.pdf")
+```
+
+```{r plot10, fig.height = 1, fig.width = 1, out.width = "85%", fig.align = "center", fig.cap = 'Case B. Black-Scholes model Call and Put Options prices varying time to expiration', echo = FALSE, warning = FALSE}
+#8
+knitr::include_graphics("images/figure_2_project_3.pdf")
+```
+
+```{r plot11, echo=FALSE, fig.align="center", out.width = "85%", fig.cap='Case C. Black-Scholes model Call and Put Options prices varying time to expiration', fig.height=4, fig.width=8, warning=FALSE}
+#8
+knitr::include_graphics("images/figure_3_project_3.pdf")
+```
+
+```{r plot12, fig.height = 4, fig.width = 8, out.width = "85%", fig.align = "center", fig.cap = 'Black-Scholes model Call and Put Options prices varying Spot price', echo = FALSE, warning = FALSE}
+#8
+knitr::include_graphics("images/figure_4_project_3.pdf")
+```
+
+\clearpage
+
+## Exploring the impact of a non-constant on the distribution of profits of hedging
+
